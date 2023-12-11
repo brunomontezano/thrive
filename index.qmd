@@ -1,0 +1,266 @@
+---
+title: "Smartphone based intervention for depressive symptoms: a randomized non-inferiority clinical trial"
+subtitle: "Código para limpeza e análise de dados"
+author:
+  - name: Bruno Braga Montezano
+    id: bm
+    orcid: 0000-0002-4627-1776
+    email: bmontezano@hcpa.edu.br
+    affiliation: 
+      - name: Federal University of Rio Grande do Sul
+        city: Porto Alegre
+        state: RS
+        url: https://www.ufrgs.br/ppgpsiquiatria/
+license: "CC BY"
+copyright: 
+  holder: Bruno Braga Montezano
+  year: 2023
+date: today
+lang: pt-br
+theme: journal
+execute:
+  message: false
+format:
+  html:
+    code-fold: true
+    highlight-style: nord
+---
+
+# Carregamento dos dados
+
+No total, foram carregados 17 arquivos para a sessão. São eles:
+
+1. Onda 1 (coletado pelo SurveyMonkey): `w1.xlsx`
+2. Onda 2 (coletado pelo SurveyMonkey): `w2.xlsx`
+3. Onda 3 (coletado pelo SurveyMonkey): `w3.xlsx`
+4. Onda 4 (coletado pelo SurveyMonkey): `w4.xlsx`
+5. Onda de *follow-up* (coletado pelo SurveyMonkey): `followup.xlsx`
+6. Onda 1 da lista de espera (coletado pelo SurveyMonkey): `w1_wl.xlsx`
+7. Onda final da lista de espera (coletado pelo SurveyMonkey): `final_wl.xlsx`
+8. Dados de triagem (coletado pelo SurveyMonkey): `screening.xlsx`
+9. Dados sociodemográficos (coletado pelo SurveyMonkey): `thrive_so.xlsx`
+10. Dados de triagem — versão 1 (coletado pelo ODK): `odk_v1.xlsx`
+11. Dados de triagem — versão 2 (coletado pelo ODK): `odk_v2.xlsx`
+12. Dados de triagem — versão 3 (coletado pelo ODK): `odk_v3.xlsx`
+13. Dados de triagem — versão 4 (coletado pelo ODK): `odk_v4.xlsx`
+14. Dados do aplicativo Thrive (formato largo): `thrive_wide_data.csv`
+15. Dados do aplicativo Thrive (formato longo): `thrive_long_data.csv`
+16. Dados do projeto COVIDPSY: `covidpsy_data.sav`
+17. Tabela com grupos de tratamento: `grupos_thrive.xlsx`
+
+Os dados em formato `xlsx` foram carregados através da função `read_xlsx`
+do pacote `readxl`. Arquivos separados por vírgula (`csv`) foram carregados
+com a função `read_csv` do pacote `readr` e o arquivo em `sav`referente ao
+projeto COVIDPSY foi carregado por meio da função `read_sav` do pacote
+`haven`.
+
+```{r carregar-dados}
+#| message: false
+
+# Ler dados do SurveyMonkey
+w1 <- readxl::read_xlsx("./data/sm_clean_data/w1.xlsx")
+w2 <- readxl::read_xlsx("./data/sm_clean_data/w2.xlsx")
+w3 <- readxl::read_xlsx("./data/sm_clean_data/w3.xlsx")
+w4 <- readxl::read_xlsx("./data/sm_clean_data/w4.xlsx")
+fu <- readxl::read_xlsx("./data/sm_clean_data/followup.xlsx")
+w1_wl <- readxl::read_xlsx("./data/sm_clean_data/w1_wl.xlsx")
+final_wl <- readxl::read_xlsx("./data/sm_clean_data/final_wl.xlsx")
+screening <- readxl::read_xlsx("./data/sm_clean_data/screening.xlsx")
+socio <- readxl::read_xlsx("./data/sm_clean_data/thrive_so.xlsx")
+
+# Ler dados do ODK
+odk_1 <- readxl::read_xlsx("./data/odk_data/odk_v1.xlsx")
+odk_2 <- readxl::read_xlsx("./data/odk_data/odk_v2.xlsx")
+odk_3 <- readxl::read_xlsx("./data/odk_data/odk_v3.xlsx")
+odk_4 <- readxl::read_xlsx("./data/odk_data/odk_v4.xlsx")
+
+# Ler dados do aplicativo Thrive
+thrive_wide <- readr::read_csv("./data/thrive_data/thrive_wide_data.csv")
+thrive_long <- readr::read_csv("./data/thrive_data/thrive_long_data.csv")
+
+# Ler dados do estudo COVIDPSY
+covidpsy <- haven::read_sav("./data/covidpsy_data/covidpsy_data.sav")
+
+# Ler tabela de grupos validados
+group_table <- readxl::read_xlsx("./data/misc_data/grupos_thrive.xlsx")
+```
+
+# União dos dados
+
+Logo na sequência, os dados das quatro ondas de avaliação foram unidos
+através da função `bind_rows` do pacote `dplyr`. Para identificação das
+*waves*, criou-se uma nova coluna chamada `time` (com valores de 1 a 4).
+
+```{r juntar-dados-survey}
+# Juntar tabelas das ondas 1, 2, 3 e 4
+all_waves <- dplyr::bind_rows(w1, w2, w3, w4, .id = "time")
+```
+
+# Limpeza de emails e duplicatas
+
+O próximo passo foi realizar uma limpeza nas observações. A variável de
+`email` foi processada através da aplicação da função `str_to_lower` do
+pacote `stringr` para transformar os emails para letra minúscula e a função
+`str_squish` foi usada para remover espaços no início e final dos emails,
+assim como remover espaços duplicados. Removemos registros de teste do
+banco de dados também.
+
+Após, foi realizado um processo para solucionar o problema de múltiplos
+registros de resposta de um sujeito em uma mesma *wave* (onda de avaliação).
+Para tal, a base foi agrupada por tempo (`time`) e `email` (o identificador
+único), e foram mantidos apenas o último registro para cada combinação de
+email e onda de avaliação. Para isso, usou-se funções do pacote `dplyr`.
+
+```{r limpar-emails-e-entradas}
+# Manter apenas as observações não-repetidas
+all_waves <- all_waves |>
+    # Limpar variável email (letra minúscula e remover espaços)
+    dplyr::mutate(email = stringr::str_squish(stringr::str_to_lower(email))) |>
+    # Remover entradas de teste
+    dplyr::filter(email != "antonelli.thyago@gmail.com") |>
+    # Agrupar por tempo e email
+    dplyr::group_by(time, email) |>
+    # Manter apenas a última observação deste agrupamento
+    dplyr::slice_tail(n = 1) |>
+    # Desagrupar os dados
+    dplyr::ungroup()
+```
+
+# Cálculo dos escores
+
+Então, para o cálculo dos escores acontecer corretamente, as variáveis dos
+itens das escalas tiveram de ser recodificadas. Elas estavam apresentando
+uma amplitude de 1 a 4, porém para os escores de ambos os instrumentos as
+respostas devem gradar entre 0 e 3. Para isso, substraímos 1 de cada resposta
+para que os itens ficassem adequadamente codificados.
+
+Após, os escores da PHQ-9 e GAD-7 foram calculados para todos os sujeitos.
+
+```{r calcular-escores}
+all_waves <- all_waves |>
+    # Recodificar a PHQ e GAD pois estavam com range errado (1-4)
+    dplyr::mutate(
+        dplyr::across(dplyr::matches("^(phq|gad).*$"), \(x) x - 1)
+    ) |>
+    dplyr::rowwise() |>
+    # Calcular escores totais da PHQ-9 e GAD-7
+    dplyr::mutate(
+        phq_total = phq_01 + phq_02 + phq_03 + phq_04 + phq_05 + phq_06 +
+            phq_07 + phq_08 + phq_09,
+        gad_total = gad_01 + gad_02 + gad_03 + gad_04 + gad_05 + gad_06 +
+            gad_07
+    ) |>
+    # Desagrupar os dados
+    dplyr::ungroup()
+```
+
+# Inclusão dos grupos de tratamento
+
+Na sequência das etapas anteriores, usou-se o conjunto de dados carregado como
+`group_table` para adicionar através de um `dplyr::left_join`, uma variável com
+os grupos de tratamento do estudo (Group e-CBT ou Thrive) associado a cada um
+dos emails.
+
+Após, removemos todas observações com valores ausentes na nova variável
+de grupo, chamada `group`.
+
+```{r incluir-grupos}
+all_waves <- all_waves |>
+    # Selecionar apenas email, wave, e escores da PHQ e GAD
+    dplyr::select(email, time, phq_total, gad_total) |>
+    # Inserir coluna com grupos de tratamento (e-CBT ou Thrive)
+    dplyr::left_join(group_table, by = dplyr::join_by(email == email)) |>
+    # Remover entradas com valor ausente no grupo
+    dplyr::filter(!is.na(group))
+```
+
+# Visualização da PHQ-9 (intention-to-treat)
+
+```{r plotar-phq-itt}
+# Calcular média e desvio padrão da PHQ por grupo e tempo (intention-to-treat)
+rcompanion::groupwiseMean(phq_total ~ time + group,
+                          data = all_waves,
+                          na.rm = TRUE) |>
+    dplyr::mutate(group = dplyr::if_else(group == "tccg", "Group e-CBT", "Thrive App")) |>
+    ggplot2::ggplot(ggplot2::aes(x = time, y = Mean, group = group,
+                                 color = group, label = paste0(
+                                                            "n = ",
+                                                            as.character(n),
+                                                            "\n",
+                                                            as.character(Mean),
+                                                            " (",
+                                                            as.character(Trad.lower),
+                                                            ", ",
+                                                            as.character(Trad.upper),
+                                                            ")"
+                                                            )
+                                 )
+    ) +
+    ggplot2::geom_line(linewidth = 1.5,
+                       position = ggplot2::position_dodge(0.1)) +
+    ggplot2::geom_errorbar(ggplot2::aes(ymin = Trad.lower, ymax = Trad.upper),
+                           linewidth = 1.5,
+                           position = ggplot2::position_dodge(0.1)) +
+    ggrepel::geom_label_repel(size = 2, family = "IBM Plex Sans",
+                        show.legend = FALSE,
+                        position = ggplot2::position_dodge(0.1)) +
+    ggsci::scale_color_jama() +
+    ggplot2::theme_classic(12, "IBM Plex Sans") +
+    ggplot2::labs(x = "Assessment", y = "PHQ-9 score", color = "Treatment") +
+    ggplot2::theme(legend.position = "top")
+```
+
+# Filtro de dados per-protocol
+
+Para captar os dados *per-protocol*, mantivemos apenas as observações
+que tiveram registros nas quatro ondas de avaliação (ondas 1, 2, 3 e 4).
+Criamos um vetor de emails (IDs) com estes participantes para filtrar os dados
+nos chunks seguintes.
+
+```{r pegar-emails-per-protocol}
+email_pp <- all_waves |>
+    # Contar quantas entradas tem por email
+    dplyr::count(email, sort = TRUE) |>
+    # Selecionar apenas as entradas com quatro registros
+    dplyr::filter(n == 4) |>
+    # Pegar um vetor dos emails
+    dplyr::pull(email)
+```
+
+# Visualização da PHQ-9 (per-protocol)
+
+```{r plotar-phq-pp}
+# Calcular média e desvio padrão da PHQ por grupo e tempo (per-protocol)
+all_waves |>
+    dplyr::filter(email %in% email_pp) |>
+    rcompanion::groupwiseMean(phq_total ~ time + group,
+                              data = _,
+                              na.rm = TRUE) |>
+    dplyr::mutate(group = dplyr::if_else(group == "tccg", "Group e-CBT", "Thrive App")) |>
+    ggplot2::ggplot(ggplot2::aes(x = time, y = Mean, group = group,
+                                 color = group, label = paste0(
+                                                            "n = ",
+                                                            as.character(n),
+                                                            "\n",
+                                                            as.character(Mean),
+                                                            " (",
+                                                            as.character(Trad.lower),
+                                                            ", ",
+                                                            as.character(Trad.upper),
+                                                            ")"
+                                                            )
+                                 )
+    ) +
+    ggplot2::geom_line(linewidth = 1.5,
+                       position = ggplot2::position_dodge(0.1)) +
+    ggplot2::geom_errorbar(ggplot2::aes(ymin = Trad.lower, ymax = Trad.upper),
+                           linewidth = 1.5,
+                           position = ggplot2::position_dodge(0.1)) +
+    ggrepel::geom_label_repel(size = 2, family = "IBM Plex Sans",
+                        show.legend = FALSE,
+                        position = ggplot2::position_dodge(0.1)) +
+    ggsci::scale_color_jama() +
+    ggplot2::theme_classic(12, "IBM Plex Sans") +
+    ggplot2::labs(x = "Assessment", y = "PHQ-9 score", color = "Treatment") +
+    ggplot2::theme(legend.position = "top")
+```
