@@ -1,4 +1,5 @@
-# Código para "Smartphone based intervention for depressive symptoms: a randomized non-inferiority clinical trial"
+# Código para "Smartphone based intervention for depressive symptoms: a randomized non-inferiority clinical trial" <a href='https://github.com/brunomontezano/thrive/'><img src='assets/thrive_logo.jpg' align="right" height="139" /></a>
+
 
 O presente repositório mantém os códigos para análise de dados do manuscrito
 "Smartphone based intervention for depressive symptoms: a randomized
