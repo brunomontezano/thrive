@@ -81,8 +81,9 @@ thrive_long <- readr::read_csv("./data/thrive_data/thrive_long_data.csv")
 # Ler dados do estudo COVIDPSY
 covidpsy <- haven::read_sav("./data/covidpsy_data/covidpsy_data.sav")
 
-# Ler tabela de grupos validados
+# Ler tabela de grupos validados e faltas na TCCG
 group_table <- readxl::read_xlsx("./data/misc_data/grupos_thrive.xlsx")
+faltas_table <- readxl::read_xlsx("./data/misc_data/faltas_tccg.xlsx")
 ```
 
 # União dos dados
@@ -174,41 +175,6 @@ all_waves <- all_waves |>
     dplyr::filter(!is.na(group))
 ```
 
-# Visualização da PHQ-9 (intention-to-treat)
-
-```{r plotar-phq-itt}
-# Calcular média e desvio padrão da PHQ por grupo e tempo (intention-to-treat)
-rcompanion::groupwiseMean(phq_total ~ time + group,
-                          data = all_waves,
-                          na.rm = TRUE) |>
-    dplyr::mutate(group = dplyr::if_else(group == "tccg", "Group e-CBT", "Thrive App")) |>
-    ggplot2::ggplot(ggplot2::aes(x = time, y = Mean, group = group,
-                                 color = group, label = paste0(
-                                                            "n = ",
-                                                            as.character(n),
-                                                            "\n",
-                                                            as.character(Mean),
-                                                            " (",
-                                                            as.character(Trad.lower),
-                                                            ", ",
-                                                            as.character(Trad.upper),
-                                                            ")"
-                                                            )
-                                 )
-    ) +
-    ggplot2::geom_line(linewidth = 1.5,
-                       position = ggplot2::position_dodge(0.1)) +
-    ggplot2::geom_errorbar(ggplot2::aes(ymin = Trad.lower, ymax = Trad.upper),
-                           linewidth = 1.5,
-                           position = ggplot2::position_dodge(0.1)) +
-    ggrepel::geom_label_repel(size = 2, family = "IBM Plex Sans",
-                        show.legend = FALSE,
-                        position = ggplot2::position_dodge(0.1)) +
-    ggsci::scale_color_jama() +
-    ggplot2::theme_classic(12, "IBM Plex Sans") +
-    ggplot2::labs(x = "Assessment", y = "PHQ-9 score", color = "Treatment") +
-    ggplot2::theme(legend.position = "top")
-```
 
 # Filtro de dados per-protocol
 
@@ -227,11 +193,54 @@ email_pp <- all_waves |>
     dplyr::pull(email)
 ```
 
-# Visualização da PHQ-9 (per-protocol)
+# Visualização da trajetória de cada grupo
+
+Na sequência, criamos visualizações para as trajetórias de cada grupo: `TCCG` e
+`Thrive`. Quatro gráficos foram criados: PHQ-9 analisada por
+*intention-to-treat*, PHQ-9 *per protocol*, GAD-7 por *intention-to-treat*, e
+GAD-7 *per protocol*.
+
+No chunk abaixo, o gráfico da PHQ-9 *intention-to-treat* é criado.
+
+```{r plotar-phq-itt}
+# Calcular média e desvio padrão da PHQ por grupo e tempo (intention-to-treat)
+plot_phq_itt <- rcompanion::groupwiseMean(phq_total ~ time + group,
+                          data = all_waves,
+                          na.rm = TRUE) |>
+    dplyr::mutate(group = dplyr::if_else(group == "tccg", "Group e-CBT", "Thrive App")) |>
+    ggplot2::ggplot(ggplot2::aes(x = time, y = Mean, group = group,
+                                 color = group, label = paste0(
+                                                            "n = ",
+                                                            as.character(n),
+                                                            "\n",
+                                                            as.character(Mean),
+                                                            " (",
+                                                            as.character(Trad.lower),
+                                                            ", ",
+                                                            as.character(Trad.upper),
+                                                            ")"
+                                                            )
+                                 )
+    ) +
+    ggplot2::geom_line(linewidth = 0.5,
+                       position = ggplot2::position_dodge(0.1)) +
+    ggplot2::geom_errorbar(ggplot2::aes(ymin = Trad.lower, ymax = Trad.upper),
+                           linewidth = 0.5,
+                           position = ggplot2::position_dodge(0.1)) +
+    ggrepel::geom_label_repel(size = 1.5, family = "IBM Plex Sans",
+                        show.legend = FALSE,
+                        position = ggplot2::position_dodge(0.1)) +
+    ggsci::scale_color_jama() +
+    ggplot2::theme_classic(10, "IBM Plex Sans") +
+    ggplot2::labs(x = "Assessment", y = "PHQ-9 score", color = "Treatment") +
+    ggplot2::theme(legend.position = "top")
+```
+
+Logo, o PHQ-9 *per-protocol* também.
 
 ```{r plotar-phq-pp}
 # Calcular média e desvio padrão da PHQ por grupo e tempo (per-protocol)
-all_waves |>
+plot_phq_pp <- all_waves |>
     dplyr::filter(email %in% email_pp) |>
     rcompanion::groupwiseMean(phq_total ~ time + group,
                               data = _,
@@ -251,16 +260,136 @@ all_waves |>
                                                             )
                                  )
     ) +
-    ggplot2::geom_line(linewidth = 1.5,
+    ggplot2::geom_line(linewidth = 0.5,
                        position = ggplot2::position_dodge(0.1)) +
     ggplot2::geom_errorbar(ggplot2::aes(ymin = Trad.lower, ymax = Trad.upper),
-                           linewidth = 1.5,
+                           linewidth = 0.5,
                            position = ggplot2::position_dodge(0.1)) +
-    ggrepel::geom_label_repel(size = 2, family = "IBM Plex Sans",
+    ggrepel::geom_label_repel(size = 1.5, family = "IBM Plex Sans",
                         show.legend = FALSE,
                         position = ggplot2::position_dodge(0.1)) +
     ggsci::scale_color_jama() +
-    ggplot2::theme_classic(12, "IBM Plex Sans") +
+    ggplot2::theme_classic(10, "IBM Plex Sans") +
     ggplot2::labs(x = "Assessment", y = "PHQ-9 score", color = "Treatment") +
     ggplot2::theme(legend.position = "top")
+```
+
+Assim como o gráfico da GAD-7 *intention-to-treat*.
+
+```{r plotar-gad-itt}
+# Calcular média e desvio padrão da PHQ por grupo e tempo (intention-to-treat)
+plot_gad_itt <- rcompanion::groupwiseMean(gad_total ~ time + group,
+                          data = all_waves,
+                          na.rm = TRUE) |>
+    dplyr::mutate(group = dplyr::if_else(group == "tccg", "Group e-CBT", "Thrive App")) |>
+    ggplot2::ggplot(ggplot2::aes(x = time, y = Mean, group = group,
+                                 color = group, label = paste0(
+                                                            "n = ",
+                                                            as.character(n),
+                                                            "\n",
+                                                            as.character(Mean),
+                                                            " (",
+                                                            as.character(Trad.lower),
+                                                            ", ",
+                                                            as.character(Trad.upper),
+                                                            ")"
+                                                            )
+                                 )
+    ) +
+    ggplot2::geom_line(linewidth = 0.5,
+                       position = ggplot2::position_dodge(0.1)) +
+    ggplot2::geom_errorbar(ggplot2::aes(ymin = Trad.lower, ymax = Trad.upper),
+                           linewidth = 0.5,
+                           position = ggplot2::position_dodge(0.1)) +
+    ggrepel::geom_label_repel(size = 1.5, family = "IBM Plex Sans",
+                        show.legend = FALSE,
+                        position = ggplot2::position_dodge(0.1)) +
+    ggsci::scale_color_jama() +
+    ggplot2::theme_classic(10, "IBM Plex Sans") +
+    ggplot2::labs(x = "Assessment", y = "GAD-7 score", color = "Treatment") +
+    ggplot2::theme(legend.position = "top")
+```
+
+E o gráfico da GAD-7 *per-protocol*.
+
+```{r plotar-gad-pp}
+# Calcular média e desvio padrão da PHQ por grupo e tempo (per-protocol)
+plot_gad_pp <- all_waves |>
+    dplyr::filter(email %in% email_pp) |>
+    rcompanion::groupwiseMean(gad_total ~ time + group,
+                              data = _,
+                              na.rm = TRUE) |>
+    dplyr::mutate(group = dplyr::if_else(group == "tccg", "Group e-CBT", "Thrive App")) |>
+    ggplot2::ggplot(ggplot2::aes(x = time, y = Mean, group = group,
+                                 color = group, label = paste0(
+                                                            "n = ",
+                                                            as.character(n),
+                                                            "\n",
+                                                            as.character(Mean),
+                                                            " (",
+                                                            as.character(Trad.lower),
+                                                            ", ",
+                                                            as.character(Trad.upper),
+                                                            ")"
+                                                            )
+                                 )
+    ) +
+    ggplot2::geom_line(linewidth = 0.5,
+                       position = ggplot2::position_dodge(0.1)) +
+    ggplot2::geom_errorbar(ggplot2::aes(ymin = Trad.lower, ymax = Trad.upper),
+                           linewidth = 0.5,
+                           position = ggplot2::position_dodge(0.1)) +
+    ggrepel::geom_label_repel(size = 1.5, family = "IBM Plex Sans",
+                        show.legend = FALSE,
+                        position = ggplot2::position_dodge(0.1)) +
+    ggsci::scale_color_jama() +
+    ggplot2::theme_classic(10, "IBM Plex Sans") +
+    ggplot2::labs(x = "Assessment", y = "GAD-7 score", color = "Treatment") +
+    ggplot2::theme(legend.position = "top")
+```
+
+Ao final, os gráficos são unidos da seguinte forma:
+
+- **a1)**: PHQ-9 ITT
+- **a2)**: PHQ-9 PP
+- **b1)**: GAD-7 ITT
+- **b2)**: GAD-7 PP
+
+```{r plotar-vis}
+library(patchwork)
+
+((plot_phq_itt + plot_phq_pp) + plot_layout(tag_level = "new")) /
+    ((plot_gad_itt + plot_gad_pp) + plot_layout(tag_level = "new")) + plot_annotation(tag_levels = c("a", "1"),
+                                                   tag_suffix = ")") +
+    plot_layout(guides = "collect") & ggplot2::theme(legend.position='bottom')
+```
+
+# Modelos lineares mistos para avaliar melhora com o tempo
+
+```{r llm-comparison}
+itt_data <- all_waves |>
+    dplyr::mutate(time = as.numeric(time) - 1)
+
+pp_data <- itt_data |>
+    dplyr::filter(email %in% email_pp)
+
+itt_phq <- lmerTest::lmer(phq_total ~ time * group + (1 | email),
+                          data = itt_data)
+
+pp_phq <- lmerTest::lmer(phq_total ~ time * group + (1 | email),
+                          data = pp_data)
+
+itt_phq |> summary()
+
+pp_phq |> summary()
+
+itt_gad <- lmerTest::lmer(gad_total ~ time * group + (1 | email),
+                          data = itt_data)
+
+pp_gad <- lmerTest::lmer(gad_total ~ time * group + (1 | email),
+                          data = pp_data)
+
+itt_gad |> summary()
+
+pp_gad |> summary()
 ```
