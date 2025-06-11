@@ -9,7 +9,7 @@ comportamental em grupo online (Group e-CBT) e um aplicativo de smartphone para
 tratamento de depressão e ansiedade (Thrive App) para desfechos de depressão e
 ansiedade.
 
-[O website com o código pode ser acessado aqui.](https://brunomontezano.github.io/thrive/)
+[O website com o código pode ser acessado aqui.](https://brunomontezano.com.br/thrive/)
 
 ## For English Speakers
 
@@ -20,7 +20,7 @@ is a clinical trial comparing online group cognitive-behavioral therapy (Group
 e-CBT) and a smartphone app for the treatment of depression and anxiety
 (Thrive App) in terms of depression and anxiety outcomes.
 
-[The website with the code can be accessed here.](https://brunomontezano.github.io/thrive/)
+[The website with the code can be accessed here.](https://brunomontezano.com.br/thrive/)
 
 ## Contato
 
